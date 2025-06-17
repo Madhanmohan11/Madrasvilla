@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,7 +19,7 @@ export const Navigation = () => {
           {/* Logo + Brand Name */}
           <Link to="/" className="flex items-center space-x-2">
             <img
-              src="/src/assets/logo.png"
+              src={logo} 
               alt="Madras Villa Logo"
               className="h-6 w-8 object-contain"
             />
