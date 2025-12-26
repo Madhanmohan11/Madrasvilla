@@ -3,13 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Home, Calendar, Users, Image, Bell, X, TrendingUp } from 'lucide-react';
-
-// --- Firebase Firestore Imports ---
-import { db } from '@/lib/firebase'; // Import the Firestore instance
-import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore'; // Import Firestore functions
-// --- End Firebase Firestore Imports ---
-
-// Ensure these components exist at the specified paths
+import { db } from '@/lib/firebase'; 
+import { collection, query, onSnapshot, orderBy, Timestamp } from 'firebase/firestore'; 
 import { AvailabilityManager } from './AvailabilityManager';
 import { BookingManager } from './BookingManager';
 import { GalleryManager } from './GalleryManager';
@@ -18,75 +13,74 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-// Updated Booking interface to reflect potential Firestore data structure
+ 
 interface Booking {
   id: string;
   name: string;
   email: string;
   phone: string;
-  checkIn: string; // Stored as ISO string (e.g., "YYYY-MM-DD")
-  checkOut: string; // Stored as ISO string
+  checkIn: string; 
+  checkOut: string;  
   checkInTime: string;
   checkOutTime: string;
   guests: number;
-  // createdAt can be string (ISO) or Timestamp from Firestore
+ 
   createdAt: string | Timestamp;
   status: 'pending' | 'confirmed' | 'cancelled';
-  // Add a unique ID for notifications if not directly using booking.id
+  
   notificationId?: string;
 }
 
 export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]); // Consider a more specific type for notifications
+  const [notifications, setNotifications] = useState<any[]>([]);  
   const [bookingStats, setBookingStats] = useState({
     totalBookings: 0,
     confirmedBookings: 0,
-    // Changed property name from averageGuestsPerBooking to averageBookingsCount
+  
     averageBookingsCount: '0',
     estimatedTotalRevenue: '₹0'
   });
 
-  // Effect to fetch and listen for real-time booking data from Firestore
+  
   useEffect(() => {
-    const bookingsColRef = collection(db, 'bookings'); // Reference to the 'bookings' collection
-    // Create a query to order bookings by creation date, newest first
+    const bookingsColRef = collection(db, 'bookings'); 
+    
     const q = query(bookingsColRef, orderBy('createdAt', 'desc'));
 
-    // Set up a real-time listener (onSnapshot)
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedBookings: Booking[] = snapshot.docs.map(doc => {
         const data = doc.data();
         const createdAt = data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString() // Convert Timestamp to ISO string
-          : data.createdAt; // Assume it's already an ISO string if not a Timestamp
+          ? data.createdAt.toDate().toISOString()  
+          : data.createdAt;  
 
         return {
-          id: doc.id, // The document ID from Firestore
+          id: doc.id,  
           name: data.name,
           email: data.email,
           phone: data.phone,
           checkIn: data.checkIn,
           checkOut: data.checkOut,
-          checkInTime: data.checkInTime || '', // Default to empty string if not present
-          checkOutTime: data.checkOutTime || '', // Default to empty string if not present
-          guests: data.guests || 0, // Default to 0 if not present
+          checkInTime: data.checkInTime || '', 
+          checkOutTime: data.checkOutTime || '',  
+          guests: data.guests || 0,  
           createdAt: createdAt,
-          status: data.status || 'pending', // Default to 'pending' if status is not set
+          status: data.status || 'pending',  
         };
       });
 
-      // --- Recalculate Booking Statistics based on fetched Firestore data ---
+    
       const totalBookings = fetchedBookings.length;
       const confirmedBookings = fetchedBookings.filter(b => b.status === 'confirmed');
 
-      // Calculate Average Booking based on confirmed bookings length, rounded
-      // Example: 6 confirmed bookings -> 3; 3 confirmed bookings -> 1 (rounded)
+   
       const averageBookingsCount = Math.round(confirmedBookings.length / 2).toString();
 
-      // Calculate Estimated Total Revenue
+       
       let totalEstimatedRevenue = 0;
-      const ratePerGuestPerNight = 2500; // Example: ₹2500 per guest per night
+      const ratePerGuestPerNight = 2500; 
 
       confirmedBookings.forEach(booking => {
         const checkIn = new Date(booking.checkIn);
@@ -94,7 +88,7 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
 
         if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || checkOut <= checkIn) {
           console.warn("Invalid or illogical date range found in confirmed booking for revenue calculation:", booking);
-          return; // Skip invalid bookings
+          return;  
         }
 
         const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
@@ -106,7 +100,7 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
       setBookingStats({
         totalBookings,
         confirmedBookings: confirmedBookings.length,
-        averageBookingsCount, // Updated property name and value
+        averageBookingsCount,  
         estimatedTotalRevenue: estimatedTotalRevenueFormatted
       });
 
@@ -215,12 +209,12 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
                 )}
               </Button>
 
-              {/* Notification Dropdown - Centered on All Devices */}
+            
               {notificationOpen && (
-                <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setNotificationOpen(false)}> {/* Overlay for closing */}
+                <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setNotificationOpen(false)}>  
                   <div
                     className="absolute top-5 left-1/2 -translate-x-1/2 w-80 max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
-                    onClick={(e) => e.stopPropagation()} // Prevent click from closing dropdown immediately
+                    onClick={(e) => e.stopPropagation()}  
                   >
                     <div className="p-4 border-b border-gray-100">
                       <div className="flex items-center justify-between">
@@ -353,7 +347,7 @@ export const AdminDashboard = ({ onLogout }: AdminDashboardProps) => {
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                           {/* Changed CardTitle and description */}
                           <CardTitle className="text-sm font-medium text-purple-700">Average Booking</CardTitle>
-                          <Calendar className="w-4 h-4 text-purple-600" /> {/* Changed icon to Calendar for 'Booking' */}
+                          <Calendar className="w-4 h-4 text-purple-600" /> 
                         </CardHeader>
                         <CardContent>
                           {/* Changed property to display */}

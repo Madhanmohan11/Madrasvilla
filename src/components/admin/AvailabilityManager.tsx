@@ -3,12 +3,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Added AlertTitle
-import { Info, User, Calendar as CalendarIcon, Users as UsersIcon, Loader2 } from 'lucide-react'; // Added Loader2
-import { useToast } from '@/components/ui/use-toast'; // Assuming you have shadcn/ui toast setup
-
-// --- Firebase Firestore Imports ---
-import { db } from '@/lib/firebase'; // Import the Firestore instance
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';  
+import { Info, User, Calendar as CalendarIcon, Users as UsersIcon, Loader2 } from 'lucide-react';  
+import { useToast } from '@/components/ui/use-toast';  
+import { db } from '@/lib/firebase';  
 import {
   collection,
   query,
@@ -18,43 +16,43 @@ import {
   doc,
   where,
   getDocs,
-  Timestamp, // Import Timestamp for date handling
+  Timestamp,  
 } from 'firebase/firestore';
-// --- END Firebase Firestore Imports ---
+ 
 
 interface Booking {
   id: string;
   name: string;
   email: string;
   phone: string;
-  checkIn: string; // Stored as ISO string
-  checkOut: string; // Stored as ISO string
+  checkIn: string;  
+  checkOut: string;  
   guests: number;
-  createdAt: string; // Will be ISO string from Firestore Timestamp
+  createdAt: string;  
   status: 'pending' | 'confirmed' | 'cancelled';
-  // Optional: Add checkInTime and checkOutTime if they are relevant for display
+ 
   checkInTime?: string;
   checkOutTime?: string;
 }
 
 export const AvailabilityManager = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [manuallyBookedDates, setManuallyBookedDates] = useState<Date[]>([]); // Manually set booked dates
-  const [confirmedBookingRanges, setConfirmedBookingRanges] = useState<Date[]>([]); // Individual dates from confirmed bookings
-  const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([]); // List of confirmed booking objects
-  const [loading, setLoading] = useState(true); // New loading state for initial data fetch
-  const [actionLoading, setActionLoading] = useState(false); // Loading state for mark actions
+  const [manuallyBookedDates, setManuallyBookedDates] = useState<Date[]>([]);  
+  const [confirmedBookingRanges, setConfirmedBookingRanges] = useState<Date[]>([]);  
+  const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([]);  
+  const [loading, setLoading] = useState(true);  
+  const [actionLoading, setActionLoading] = useState(false); 
 
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast(); 
 
-  // Helper to check if a date is within a confirmed booking range
+  
   const isDateInConfirmedBooking = useCallback((date: Date): boolean => {
     return confirmedBookingRanges.some(bookingDate =>
       bookingDate.toDateString() === date.toDateString()
     );
   }, [confirmedBookingRanges]);
 
-  // Helper to check if a date is manually booked
+ 
   const isDateManuallyBooked = useCallback((date: Date): boolean => {
     return manuallyBookedDates.some(manuallyDate =>
       manuallyDate.toDateString() === date.toDateString()
@@ -62,9 +60,9 @@ export const AvailabilityManager = () => {
   }, [manuallyBookedDates]);
 
   useEffect(() => {
-    setLoading(true); // Start loading
+    setLoading(true);  
 
-    // --- Listener for Manually Booked Dates ('manualAvailability' collection) ---
+    
     const manualAvailabilityColRef = collection(db, 'manualAvailability');
     const unsubscribeManual = onSnapshot(manualAvailabilityColRef, (snapshot) => {
       const fetchedManualDates: Date[] = snapshot.docs.map(doc => {
@@ -72,19 +70,19 @@ export const AvailabilityManager = () => {
         if (data.date instanceof Timestamp) {
           return data.date.toDate();
         }
-        // Fallback for older data or different types, though Timestamp is preferred
+        
         try {
-          // Attempt to parse string dates, but prefer Timestamp
+         
           if (typeof data.date === 'string') {
             return new Date(data.date);
           }
         } catch (e) {
           console.error("Invalid date format in manualAvailability for doc:", doc.id, data.date);
         }
-        return new Date(NaN); // Return an invalid date
-      }).filter(date => !isNaN(date.getTime())); // Filter out invalid dates
+        return new Date(NaN); 
+      }).filter(date => !isNaN(date.getTime())) 
       setManuallyBookedDates(fetchedManualDates);
-      setLoading(false); // Manual availability loaded
+      setLoading(false);  
     }, (error) => {
       console.error("Error fetching manual availability:", error);
       toast({
@@ -92,10 +90,10 @@ export const AvailabilityManager = () => {
         description: "Failed to load manually blocked dates. Please try again.",
         variant: "destructive",
       });
-      setLoading(false); // Loading finished even on error
+      setLoading(false);  
     });
 
-    // --- Listener for Confirmed Bookings ('bookings' collection) ---
+    
     const bookingsColRef = collection(db, 'bookings');
     const qBookings = query(bookingsColRef);
 
@@ -129,18 +127,17 @@ export const AvailabilityManager = () => {
         // Validate dates before processing
         if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || checkOut <= checkIn) {
           console.warn("Invalid or illogical check-in/out date found for confirmed booking ID:", booking.id, booking);
-          // Optionally, add a toast/notification for malformed data
-          return; // Skip this booking if dates are invalid or range is illogical
+          
+          return;  
         }
 
-        // Loop from checkIn up to (but not including) checkOut
-        // This ensures the check-out day itself is available for new check-ins
+     
         for (let d = new Date(checkIn); d < checkOut; d.setDate(d.getDate() + 1)) {
           datesFromBookings.push(new Date(d));
         }
       });
       setConfirmedBookingRanges(datesFromBookings);
-      setLoading(false); // Bookings loaded
+      setLoading(false);  
     }, (error) => {
       console.error("Error fetching bookings for availability:", error);
       toast({
@@ -148,15 +145,15 @@ export const AvailabilityManager = () => {
         description: "Failed to load confirmed bookings. Please try again.",
         variant: "destructive",
       });
-      setLoading(false); // Loading finished even on error
+      setLoading(false);  
     });
 
-    // Cleanup listeners on component unmount
+   
     return () => {
       unsubscribeManual();
       unsubscribeBookings();
     };
-  }, [toast]); // Add toast to dependency array
+  }, [toast]);  
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -192,10 +189,10 @@ export const AvailabilityManager = () => {
     setActionLoading(true);
     try {
       await addDoc(collection(db, 'manualAvailability'), {
-        date: Timestamp.fromDate(selectedDate), // Store as Firestore Timestamp
+        date: Timestamp.fromDate(selectedDate),  
         markedAt: Timestamp.now(),
       });
-      setSelectedDate(undefined); // Clear selection after successful action
+      setSelectedDate(undefined);  
       toast({
         title: "Success!",
         description: `Date ${selectedDate.toLocaleDateString()} marked as booked.`,
@@ -250,7 +247,7 @@ export const AvailabilityManager = () => {
 
       if (!querySnapshot.empty) {
         await deleteDoc(doc(db, 'manualAvailability', querySnapshot.docs[0].id));
-        setSelectedDate(undefined); // Clear selection after successful action
+        setSelectedDate(undefined);  
         toast({
           title: "Success!",
           description: `Date ${selectedDate.toLocaleDateString()} marked as available.`,
@@ -290,7 +287,7 @@ export const AvailabilityManager = () => {
       const checkInDate = new Date(checkIn);
       const checkOutDate = new Date(checkOut);
       if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime()) || checkOutDate <= checkInDate) {
-        return 0; // Return 0 for invalid or illogical dates (e.g., checkout before or same as checkin)
+        return 0; 
       }
       const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -340,18 +337,17 @@ export const AvailabilityManager = () => {
                   onSelect={handleDateSelect}
                   className="rounded-md border w-full"
                   modifiers={{
-                    // Order of modifiers matters for styling priority
-                    // Dates from confirmed bookings should be orange (higher priority)
+                 
                     fromBooking: confirmedBookingRanges,
-                    // Manually booked dates should be red (applied if not already 'fromBooking')
+                    
                     manuallyBooked: manuallyBookedDates,
-                    // Available dates are green (lowest priority, applied if not 'fromBooking' or 'manuallyBooked')
+                    
                     available: (date) => date >= new Date() && !isDateInConfirmedBooking(date) && !isDateManuallyBooked(date),
                   }}
                   modifiersStyles={{
-                    fromBooking: { backgroundColor: '#f97316', color: 'white' }, // Orange for confirmed bookings
-                    manuallyBooked: { backgroundColor: '#ef4444', color: 'white' }, // Red for manually booked
-                    available: { backgroundColor: '#22c55e', color: 'white' },  // Green for available
+                    fromBooking: { backgroundColor: '#f97316', color: 'white' },  
+                    manuallyBooked: { backgroundColor: '#ef4444', color: 'white' },  
+                    available: { backgroundColor: '#22c55e', color: 'white' },   
                   }}
                 />
               </div>
@@ -434,7 +430,7 @@ export const AvailabilityManager = () => {
                 {manuallyBookedDates.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {manuallyBookedDates
-                      .sort((a, b) => a.getTime() - b.getTime()) // Sort for better readability
+                      .sort((a, b) => a.getTime() - b.getTime()) 
                       .map((date, index) => (
                         <Badge key={index} variant="destructive" className="text-xs">
                           {date.toLocaleDateString('en-GB')}
@@ -462,7 +458,7 @@ export const AvailabilityManager = () => {
           {confirmedBookings.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {confirmedBookings
-                .sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime()) // Sort by check-in date
+                .sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime())  
                 .map((booking) => (
                 <div key={booking.id} className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200">
                   <div className="flex items-start justify-between mb-3">
